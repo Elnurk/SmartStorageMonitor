@@ -15,7 +15,6 @@ String kazirgi = "";
 #define PN532_RESET (3) // 1_RFID_RSTQ
 Adafruit_PN532 nfc(PN532_IRQ, PN532_RESET); // 1_RFID
 
-
 #define RST_PIN   5     // Configurable, see typical pin layout above
 #define SS_PIN    53    // Configurable, see typical pin layout above
 MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance
@@ -24,13 +23,12 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance
 
 MFRC522::MIFARE_Key key;
 
-
-///--------------------------------
 #define DHTPIN A0
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 float t;
 float h;
+
 bool Enter_Chel = false;
 
 int DD = A1;
