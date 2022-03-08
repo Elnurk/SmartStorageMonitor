@@ -5,15 +5,14 @@
 #include <MFRC522.h>
 #include <Servo.h>
 
-Servo myservo_vhod; 
-Servo myservo_vyhod;
+Servo EnterDoor; 
+Servo ExitDoor;
 
 uint8_t admin[4] = {180,253,163,44};
 String kazirgi = "";
 
 #define PN532_IRQ   (2) // 1_RFID_IRQ
 #define PN532_RESET (3) // 1_RFID_RSTQ
-
 Adafruit_PN532 nfc(PN532_IRQ, PN532_RESET); // 1_RFID
 
 
@@ -30,63 +29,57 @@ MFRC522::MIFARE_Key key;
 #define DHTPIN A0
 #define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
-float h;
 float t;
-
+float h;
 bool Enter_Chel = false;
 
 int DD = A1;
 bool DD_TF = false;
 
-int ZVUK = 10;
+int Sound = 10;
 
 int led_r = 13;
 int led_g = 12;
 int led_b = 11;
 
-int servo_inp = 9;
-int servo_out = 7;
-
 bool Alarm = true;
 bool Trivoga = false;
 
-void setup(void) {
+void setup() {
   Serial.begin(115200);
-
-  myservo_vhod.attach(9);  
-  myservo_vyhod.attach(7);
+  EntryDoor.attach(9);  
+  ExitDoor.attach(7);
   
   install_RFID_1();
   install_RFID_2();
 
-  Serial.println(F("DHTxx test!"));
   dht.begin();
 
   pinMode(DD, INPUT);
 
   pinMode(led_r, OUTPUT);
   pinMode(led_g, OUTPUT);
-  pinMode(ZVUK, OUTPUT);
+  pinMode(Sound, OUTPUT);
 
-  myservo_vhod.write(75);
-  myservo_vyhod.write(65);  
+  EntryDoor.write(75);
+  ExitDoor.write(65);  
 }
 
-void loop(void) {
+void loop() {
   Check_Temp();
   Check_DD();
   
   if(Alarm){
     digitalWrite(led_g, 0);
-//    chek_trivoga();
+    CheckAlert();
     if(Trivoga){
       digitalWrite(led_r, 1);
-      digitalWrite(ZVUK, 1);
+      digitalWrite(Sound, 1);
       digitalWrite(led_b, 0);
     }
     else{
       digitalWrite(led_r, 0);
-      digitalWrite(ZVUK, 0);
+      digitalWrite(Sound, 0);
       digitalWrite(led_b, 1);
     }
     
@@ -101,22 +94,16 @@ void loop(void) {
   }
 }
 
-
-
-
-
 void Check_Temp(){
   // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   h = dht.readHumidity();
   t = dht.readTemperature();
   if (isnan(h) || isnan(t)) {
     Serial.println(F("Failed to read from DHT sensor!"));
     return;
   }
-
-  Serial.print(F("Humidity: "));
-  Serial.print(h);
+  Serial.print(F("%  Humidity: "));
+  Serial.println(h);
   Serial.print(F("%  Temperature: "));
   Serial.println(t);
   Serial.println(DD_TF);
@@ -128,26 +115,28 @@ void Check_DD(){
 }
 
 
-// RFID 1 -------------------------------------------------------------------------------
-void install_RFID_1(){
-  while (!Serial) delay(10);
 
-  nfc.begin();
+void enter_open_door(){
+  EntryServo.write(10);   
+  delay(2000);    
+  EntryServo.write(75); 
+}
 
-  uint32_t versiondata = nfc.getFirmwareVersion();
-  if (! versiondata) {
-    Serial.print("Didn't find PN53x board");
-    while (1); // halt
+void exit_open_door(){
+  ExitServo.write(110); 
+  delay(2000);    
+  ExitServo.write(65); 
+}
+
+void CheckAlert(){
+  if(DD_TF || (t>60) || (h>70)){
+    Alarm = true;
+    Serial.println("triviga");
   }
-  
-  // Got ok data, print it out!
-  Serial.print("Found chip PN5"); Serial.println((versiondata>>24) & 0xFF, HEX); 
-  Serial.print("Firmware ver. "); Serial.print((versiondata>>16) & 0xFF, DEC); 
-  Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
-  
-  nfc.setPassiveActivationRetries(0xFF);
-  
-  nfc.SAMConfig();
+  else{
+    Alarm = false;
+    Serial.println("ahudania");
+  }
 }
 
 void read_RFID_1(){
@@ -163,7 +152,7 @@ void read_RFID_1(){
     Serial.print("UID Value: ");
     if ( array_cmp(admin, uid, 4, 4) == true ){
       Alarm = false;
-      Serial.println("KIRDI");
+      Serial.println("Entered");
       enter_open_door();
     }
     for (uint8_t i=0; i < uidLength; i++) 
@@ -175,20 +164,6 @@ void read_RFID_1(){
   else
   {
     Serial.println("Timed out waiting for a card");
-  }
-}
-//--------------------------------------------------------------------------------------------------
-
-// RFID 2 -------------------------------------------------------------------------------
-void install_RFID_2(){
-  while (!Serial);     // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
-  SPI.begin();         // Init SPI bus
-  mfrc522.PCD_Init();  // Init MFRC522 card
-  Serial.println(F("Warning: this example overwrites the UID of your UID changeable card, use with care!"));
-  
-  // Prepare key - all keys are set to FFFFFFFFFFFFh at chip delivery from the factory.
-  for (byte i = 0; i < 6; i++) {
-    key.keyByte[i] = 0xFF;
   }
 }
 
@@ -203,7 +178,7 @@ void read_RFID_2(){
   // Dump UID
   if ( array_cmp(admin, mfrc522.uid.uidByte, 4, 4) == true ){
       Alarm = true;
-      Serial.println("Shuktu");
+      Serial.println("Left");
       exit_open_door();
     }
     
@@ -232,42 +207,46 @@ void read_RFID_2(){
   Serial.println(F("New UID and contents:"));
   mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
 }
-//--------------------------------------------------------------------------------------------------
 
-void enter_open_door(){
-  myservo_vhod.write(10);   
-  delay(2000);    
-  myservo_vhod.write(75); 
-}
+void install_RFID_1(){
+  while (!Serial) delay(10);
 
-void exit_open_door(){
-  myservo_vyhod.write(110); 
-  delay(2000);    
-  myservo_vyhod.write(65); 
-}
+  nfc.begin();
 
-void chek_trivoga(){
-  if(DD_TF || (t>60) || (h>70)){
-    Trivoga = true;
-    
-    Serial.println("triviga");
+  uint32_t versiondata = nfc.getFirmwareVersion();
+  if (! versiondata) {
+    Serial.print("Didn't find PN53x board");
+    while (1); // halt
   }
-  else{
-    Trivoga = false;
-    Serial.println("ahudania");
-  }
+  
+  // Got ok data, print it out!
+  Serial.print("Found chip PN5"); Serial.println((versiondata>>24) & 0xFF, HEX); 
+  Serial.print("Firmware ver. "); Serial.print((versiondata>>16) & 0xFF, DEC); 
+  Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
+  
+  nfc.setPassiveActivationRetries(0xFF);
+  
+  nfc.SAMConfig();
 }
 
+void install_RFID_2(){
+  while (!Serial);     // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
+  SPI.begin();         // Init SPI bus
+  mfrc522.PCD_Init();  // Init MFRC522 card
+  Serial.println(F("Warning: this example overwrites the UID of your UID changeable card, use with care!"));
+  
+  // Prepare key - all keys are set to FFFFFFFFFFFFh at chip delivery from the factory.
+  for (byte i = 0; i < 6; i++) {
+    key.keyByte[i] = 0xFF;
+  }
+}
 
 boolean array_cmp(uint8_t *a, uint8_t *b, int len_a, int len_b){
       int n;
-
       // if their lengths are different, return false
       if (len_a != len_b) return false;
-
       // test each element to be the same. if not, return false
       for (n=0;n<len_a;n++) if (a[n]!=b[n]) return false;
-
       //ok, if we have not returned yet, they are equal :)
       return true;
 }
