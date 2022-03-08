@@ -43,7 +43,7 @@ int led_g = 12;
 int led_b = 11;
 
 bool Alarm = true;
-bool Trivoga = false;
+bool Alert = false;
 
 void setup() {
   Serial.begin(115200);
@@ -67,12 +67,12 @@ void setup() {
 
 void loop() {
   Check_Temp();
-  Check_DD();
+  DD_TF = digitalRead(DD);
   
   if(Alarm){
     digitalWrite(led_g, 0);
     CheckAlert();
-    if(Trivoga){
+    if(Alert){
       digitalWrite(led_r, 1);
       digitalWrite(Sound, 1);
       digitalWrite(led_b, 0);
@@ -109,13 +109,6 @@ void Check_Temp(){
   Serial.println(DD_TF);
 }
 
-void Check_DD(){
-  DD_TF = digitalRead(DD);
-  Serial.println(DD_TF);
-}
-
-
-
 void enter_open_door(){
   EntryServo.write(10);   
   delay(2000);    
@@ -130,12 +123,12 @@ void exit_open_door(){
 
 void CheckAlert(){
   if(DD_TF || (t>60) || (h>70)){
-    Alarm = true;
-    Serial.println("triviga");
+    Alert = true;
+    Serial.println("Alarm");
   }
   else{
-    Alarm = false;
-    Serial.println("ahudania");
+    Alert = false;
+    Serial.println("Waiting");
   }
 }
 
