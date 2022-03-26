@@ -1,9 +1,16 @@
+#include <ESP8266WiFi.h>
+#include <FirebaseArduino.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_PN532.h> 
 #include "DHT.h"
 #include <MFRC522.h>
 #include <Servo.h>
+
+#define FIREBASE_HOST "smart-storage-72e72-default-rtdb.europe-west1.firebasedatabase.app"
+#define FIREBASE_AUTH "FSnockjffp226KnT2ToXzmt9k3XiFkvdD29kD2L6"
+#define WIFI_SSID "your WIFI SSID"
+#define WIFI_PASSWORD "your WIF PASSWORD"
 
 Servo myservo_vhod; 
 Servo myservo_vyhod;
@@ -70,6 +77,18 @@ void setup(void) {
 
   myservo_vhod.write(75);
   myservo_vyhod.write(65);  
+  
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("connecting");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println();
+  Serial.print("connected: ");
+  Serial.println(WiFi.localIP());
+  
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
 }
 
 void loop(void) {
@@ -99,11 +118,9 @@ void loop(void) {
     
     read_RFID_2();
   }
+  
+  SendFirebase();
 }
-
-
-
-
 
 void Check_Temp(){
   // Reading temperature or humidity takes about 250 milliseconds!
@@ -270,4 +287,19 @@ boolean array_cmp(uint8_t *a, uint8_t *b, int len_a, int len_b){
 
       //ok, if we have not returned yet, they are equal :)
       return true;
+}
+
+void SendFirebase() {
+  Firebase.setFloat("humidity", h);
+  if (Firebase.failed()) {
+      Serial.print("setting humidity failed:");
+      Serial.println(Firebase.error());  
+      return; 
+  }
+  Firebase.setFloat("temperature", t);
+  if (Firebase.failed()) {
+      Serial.print("setting temperature failed:");
+      Serial.println(Firebase.error());  
+      return; 
+  } 
 }
