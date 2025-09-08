@@ -1,6 +1,6 @@
-# SmartStorage
+# SmartStorageMonitor
 
-SmartStorage is an Arduino-based smart storage system designed to monitor and manage environmental conditions and inventory in a storage room or warehouse. The project consists of two firmware variants for different hardware setups.
+SmartStorageMonitor is an Arduino-based smart storage system designed to monitor and manage environmental conditions and inventory in a storage room or warehouse. The project consists of two firmware variants for different hardware setups.
 
 ## Features
 
