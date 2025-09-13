@@ -8,7 +8,7 @@ SmartStorageMonitor is an Arduino-based smart storage system designed to monitor
 - Triggers sound and LED alarm when movement is noticed inside of the storage room while Guard Mode is active.
 - Controls actuators based on remote commands.
 - Stores inventory data locally and transmits it over serial or network interfaces.
-- Provides an easy-to-use serial command interface for configuration and control.
+- Provides an easy-to-use serial command interface for debugging.
 
 ## Hardware
 
